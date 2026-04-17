@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Air Quality Dashboard</title>
+  
+  <meta name="description" content="Real-time comparative analysis of air quality (AQI) in major global cities.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="background-globes">
+     <div class="globe globe-1"></div>
+     <div class="globe globe-2"></div>
+  </div>
+  <main class="dashboard-container">
+    <header class="dashboard-header">
+      <h1>Global Air Quality</h1>
+      <p>Real-time comparative analysis of major cities</p>
+    </header>
+
+    <div class="last-updated" id="last-updated">Last updated: Fetching...</div>
+
+    <div class="grid-layout" id="city-grid">
+      <!-- Cards will be injected here dynamically by script.js -->
+    </div>
+  </main>
+  
+  <script src="script.js"></script>
+</body>
+</html>
