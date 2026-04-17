@@ -5,6 +5,7 @@ import os
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from database import engine
 
 CITIES = [
     {"name": "New York", "lat": 40.7128, "lon": -74.0060},
@@ -40,23 +41,47 @@ def prepare_features(df):
     return df
 
 def train_and_save_model():
-    print("Fetching historical data for training...")
-    all_dfs = []
-    for city in CITIES:
-        print(f"Fetching {city['name']}...")
-        df = fetch_historical_data(city)
-        if not df.empty:
-            df = prepare_features(df)
-            all_dfs.append(df)
+    print("Checking database for recent historical data...")
+    full_df = pd.DataFrame()
+    try:
+        df_db = pd.read_sql("SELECT * FROM historical_aqi", con=engine)
+        if not df_db.empty:
+            df_db["time"] = pd.to_datetime(df_db["time"])
+            if df_db["time"].max() >= pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=1):
+                print("Loaded recent data from database.")
+                full_df = df_db
+    except Exception as e:
+        pass
+
+    if full_df.empty:
+        print("Fetching historical data for training...")
+        all_dfs = []
+        for city in CITIES:
+            print(f"Fetching {city['name']}...")
+            df = fetch_historical_data(city)
+            if not df.empty:
+                all_dfs.append(df)
+                
+        if not all_dfs:
+            print("No data fetched. Aborting.")
+            return
             
-    if not all_dfs:
-        print("No data fetched. Aborting.")
-        return
+        full_df = pd.concat(all_dfs, ignore_index=True)
+        try:
+            full_df.to_sql("historical_aqi", con=engine, if_exists="replace", index=False)
+            print("Saved raw fetched data to database.")
+        except Exception as e:
+            print(f"Failed to save to database: {e}")
+            
+    print("Preparing features...")
+    processed_dfs = []
+    for (lat, lon), group in full_df.groupby(["lat", "lon"]):
+        processed_dfs.append(prepare_features(group.copy()))
         
-    full_df = pd.concat(all_dfs, ignore_index=True)
+    final_df = pd.concat(processed_dfs, ignore_index=True)
     
-    X = full_df[["lat", "lon", "hour", "dayofweek", "aqi_lag_24", "aqi_roll_24"]]
-    y = full_df["us_aqi"]
+    X = final_df[["lat", "lon", "hour", "dayofweek", "aqi_lag_24", "aqi_roll_24"]]
+    y = final_df["us_aqi"]
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     

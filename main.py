@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import os
+from database import SessionLocal, LiveQuery
 
 app = FastAPI()
 
@@ -107,6 +108,24 @@ def get_forecast(lat: float, lon: float):
             "time": target_time.isoformat(),
             "predicted_aqi": round(pred_val)
         })
+        
+    # Save the request to our database
+    db = SessionLocal()
+    try:
+        new_query = LiveQuery(
+            lat=lat,
+            lon=lon,
+            current_aqi=current_data["us_aqi"],
+            current_pm10=current_data["pm10"],
+            current_pm2_5=current_data["pm2_5"],
+            current_no2=current_data["no2"]
+        )
+        db.add(new_query)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to log live query: {e}")
+    finally:
+        db.close()
         
     return {
         "current": current_data,
